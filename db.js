@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import bcrypt from "bcryptjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, "study.db");
+const DB_PATH = path.join(__dirname, "data", "study.db");
 
 let db = null;
 
@@ -61,6 +61,8 @@ export function getDb() {
 
 export function saveDb() {
   if (!db) return;
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(DB_PATH, buffer);

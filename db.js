@@ -51,6 +51,21 @@ export async function initDb() {
     db.run("INSERT INTO users (email, password) VALUES (?, ?)", ["student@study.app", hash]);
   }
 
+  const existing2 = db.exec("SELECT id FROM users WHERE email = 'alex@study.app'");
+  if (existing2.length === 0) {
+    const hash = await bcrypt.hash("alex456", 10);
+    db.run("INSERT INTO users (email, password) VALUES (?, ?)", ["alex@study.app", hash]);
+    const userId = Number(db.exec("SELECT id FROM users WHERE email = 'alex@study.app'")[0].values[0][0]);
+    db.run("INSERT INTO tasks (user_id, title, subject, deadline, completed) VALUES (?, ?, ?, ?, ?)", [userId, "Math homework", "Math", "2026-07-01", 0]);
+    db.run("INSERT INTO tasks (user_id, title, subject, deadline, completed) VALUES (?, ?, ?, ?, ?)", [userId, "Physics lab report", "Physics", "2026-06-28", 0]);
+    db.run("INSERT INTO tasks (user_id, title, subject, deadline, completed) VALUES (?, ?, ?, ?, ?)", [userId, "History essay", "History", "2026-06-25", 1]);
+    for (let i = 0; i < 8; i++) {
+      const d = 1800 + Math.floor(Math.random() * 2700);
+      const day = 20 + Math.floor(Math.random() * 4);
+      db.run(`INSERT INTO sessions (user_id, duration, date) VALUES (?, ?, ?)`, [userId, d, `2026-06-${String(day).padStart(2, "0")}`]);
+    }
+  }
+
   saveDb();
   return db;
 }

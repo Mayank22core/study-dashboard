@@ -4,6 +4,7 @@ import DashboardStats from "./components/DashboardStats";
 import AddTaskForm from "./components/AddTaskForm";
 import TaskList from "./components/TaskList";
 import FocusTimer from "./components/FocusTimer";
+import AmbientSounds from "./components/AmbientSounds";
 import { getTasks, getStats, deleteTask, updateTask, createTask, logout } from "./api";
 import "./App.css";
 
@@ -126,6 +127,14 @@ export default function App() {
         </div>
 
         <div className="col">
+          <section className="card">
+            <div className="card-header">
+              <span className="icon">{"\u{1F50A}"}</span>
+              <h2>Ambient Sounds</h2>
+            </div>
+            <AmbientSounds />
+          </section>
+
           <section className="card">
             <div className="card-header">
               <span className="icon">{"\u{1F4DD}"}</span>

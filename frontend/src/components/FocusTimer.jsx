@@ -1,15 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { saveSession } from "../api";
 
-const WORK = 25 * 60;
-const BREAK = 5 * 60;
 const CIRCUMFERENCE = 2 * Math.PI * 78;
 
+const PRESETS = {
+  short: { work: 25 * 60, break: 5 * 60, label: "25/5" },
+  long: { work: 50 * 60, break: 10 * 60, label: "50/10" },
+};
+
 export default function FocusTimer({ onSessionSaved }) {
+  const [preset, setPreset] = useState("short");
   const [mode, setMode] = useState("work");
-  const [seconds, setSeconds] = useState(WORK);
+  const [seconds, setSeconds] = useState(PRESETS.short.work);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
+  const presetRef = useRef(preset);
+
+  useEffect(() => {
+    presetRef.current = preset;
+  }, [preset]);
 
   useEffect(() => {
     return () => clearInterval(intervalRef.current);
@@ -23,7 +32,8 @@ export default function FocusTimer({ onSessionSaved }) {
           clearInterval(intervalRef.current);
           setRunning(false);
           handleComplete();
-          return mode === "work" ? BREAK : WORK;
+          const p = presetRef.current;
+          return mode === "work" ? PRESETS[p].break : PRESETS[p].work;
         }
         return prev - 1;
       });
@@ -38,20 +48,29 @@ export default function FocusTimer({ onSessionSaved }) {
   function reset() {
     clearInterval(intervalRef.current);
     setRunning(false);
-    setSeconds(mode === "work" ? WORK : BREAK);
+    setSeconds(mode === "work" ? PRESETS[preset].work : PRESETS[preset].break);
+  }
+
+  function switchPreset(p) {
+    if (running) return;
+    clearInterval(intervalRef.current);
+    setRunning(false);
+    setPreset(p);
+    setMode("work");
+    setSeconds(PRESETS[p].work);
   }
 
   async function handleComplete() {
     if (mode === "work") {
       try {
-        await saveSession(WORK);
+        await saveSession(PRESETS[presetRef.current].work);
         if (onSessionSaved) onSessionSaved();
       } catch {}
       setMode("break");
-      setSeconds(BREAK);
+      setSeconds(PRESETS[presetRef.current].break);
     } else {
       setMode("work");
-      setSeconds(WORK);
+      setSeconds(PRESETS[presetRef.current].work);
     }
   }
 
@@ -59,10 +78,10 @@ export default function FocusTimer({ onSessionSaved }) {
     reset();
     if (mode === "work") {
       setMode("break");
-      setSeconds(BREAK);
+      setSeconds(PRESETS[preset].break);
     } else {
       setMode("work");
-      setSeconds(WORK);
+      setSeconds(PRESETS[preset].work);
     }
   }
 
@@ -72,7 +91,7 @@ export default function FocusTimer({ onSessionSaved }) {
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   }
 
-  const total = mode === "work" ? WORK : BREAK;
+  const total = mode === "work" ? PRESETS[preset].work : PRESETS[preset].break;
   const progress = 1 - seconds / total;
   const offset = CIRCUMFERENCE * (1 - progress);
 
@@ -112,6 +131,19 @@ export default function FocusTimer({ onSessionSaved }) {
         <button className="btn btn-ghost" onClick={toggleMode}>
           {mode === "work" ? "Break" : "Focus"}
         </button>
+      </div>
+
+      <div className="timer-mode-switch">
+        <span>Mode:</span>
+        {Object.entries(PRESETS).map(([key, val]) => (
+          <button
+            key={key}
+            className={`toggle-btn ${preset === key ? "active" : ""}`}
+            onClick={() => switchPreset(key)}
+          >
+            {val.label}
+          </button>
+        ))}
       </div>
     </div>
   );

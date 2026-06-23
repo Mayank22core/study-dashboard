@@ -17,6 +17,7 @@ const THEMES = [
 ];
 
 function getInitialTheme() {
+  if (!localStorage.getItem("token")) return "light";
   return localStorage.getItem("theme") || "light";
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { saveSession } from "../api";
 
 const CIRCUMFERENCE = 2 * Math.PI * 78;
@@ -15,10 +15,12 @@ export default function FocusTimer({ onSessionSaved }) {
   const [running, setRunning] = useState(false);
   const intervalRef = useRef(null);
   const presetRef = useRef(preset);
+  const modeRef = useRef(mode);
+  const onSavedRef = useRef(onSessionSaved);
 
-  useEffect(() => {
-    presetRef.current = preset;
-  }, [preset]);
+  useEffect(() => { presetRef.current = preset; }, [preset]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { onSavedRef.current = onSessionSaved; }, [onSessionSaved]);
 
   useEffect(() => {
     return () => clearInterval(intervalRef.current);
@@ -30,59 +32,72 @@ export default function FocusTimer({ onSessionSaved }) {
       setSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(intervalRef.current);
-          setRunning(false);
-          handleComplete();
-          const p = presetRef.current;
-          return mode === "work" ? PRESETS[p].break : PRESETS[p].work;
+          intervalRef.current = null;
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
   }
 
-  function pause() {
-    clearInterval(intervalRef.current);
-    setRunning(false);
-  }
-
-  function reset() {
-    clearInterval(intervalRef.current);
-    setRunning(false);
-    setSeconds(mode === "work" ? PRESETS[preset].work : PRESETS[preset].break);
-  }
-
-  function switchPreset(p) {
-    if (running) return;
-    clearInterval(intervalRef.current);
-    setRunning(false);
-    setPreset(p);
-    setMode("work");
-    setSeconds(PRESETS[p].work);
-  }
-
-  async function handleComplete() {
-    if (mode === "work") {
+  const handleComplete = useCallback(async () => {
+    const p = presetRef.current;
+    const m = modeRef.current;
+    if (m === "work") {
       try {
-        await saveSession(PRESETS[presetRef.current].work);
-        if (onSessionSaved) onSessionSaved();
+        await saveSession(PRESETS[p].work);
+        if (onSavedRef.current) onSavedRef.current();
       } catch {}
       setMode("break");
-      setSeconds(PRESETS[presetRef.current].break);
+      setSeconds(PRESETS[p].break);
     } else {
       setMode("work");
-      setSeconds(PRESETS[presetRef.current].work);
+      setSeconds(PRESETS[p].work);
     }
+  }, []);
+
+  useEffect(() => {
+    if (running && seconds === 0 && !intervalRef.current) {
+      setRunning(false);
+      handleComplete();
+    }
+  }, [running, seconds, handleComplete]);
+
+  function pause() {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    setRunning(false);
   }
 
   function toggleMode() {
-    reset();
-    if (mode === "work") {
+    if (running) return;
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    setRunning(false);
+    if (modeRef.current === "work") {
       setMode("break");
       setSeconds(PRESETS[preset].break);
     } else {
       setMode("work");
       setSeconds(PRESETS[preset].work);
     }
+  }
+
+  function reset() {
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    setRunning(false);
+    setSeconds(modeRef.current === "work" ? PRESETS[preset].work : PRESETS[preset].break);
+  }
+
+  function switchPreset(p) {
+    if (running) return;
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+    setRunning(false);
+    setPreset(p);
+    setMode("work");
+    setSeconds(PRESETS[p].work);
   }
 
   function formatTime(s) {

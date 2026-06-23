@@ -1,0 +1,11 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd backend && npm install && cd ../frontend && npm install && cd .. && npm run build:frontend"
+  },
+  "deploy": {
+    "startCommand": "cd backend && node server.js",
+    "healthcheckPath": "/api/health",
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
